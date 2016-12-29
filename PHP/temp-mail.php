@@ -10,35 +10,61 @@
 class TempMail
 {
 
-    public $mail;
     const APIURL = "https://api.temp-mail.org/";
     const APIDOMAINENDPOINT = "request/domains";
     const APIGETSMAILENDPOINT = "request/mail/id";
     const APIDELETEMAILENDPOINT = "request/delete/id";
+    public $mail;
 
     /**
      * TempMail constructor.
-     * Get a new random mail address or initialize the object with the @param null $mail
+     * Get a new random mail address or initialize the object with the
+     * complete mail as @param null $mail (e.g. test@30wave.com) or only
+     * the domain (e.g @30wave.com). With @param bool $isReadableName you
+     * can specify that the name of the mail has to be readable.
      * @return TempMail
      */
-    function TempMail($mail = null)
+    function TempMail($mail = null, $isReadableName = false)
     {
         if (isset($mail)) {
-            $this->mail = $mail;
+            $re = '/^@.*/';
+            preg_match_all($re, $mail, $matches);
+            if (count($matches[0]) > 0) {
+                // Only domain passed
+                $this->mail = $this->generateName($isReadableName) . $mail;
+            } else // Complete email passed
+                $this->mail = $mail;
         } else {
             // Generate a new mail
-            $this->mail = $this->randomMail();
+            $this->mail = $this->randomMail($isReadableName);
+        }
+    }
+
+    /**
+     * Generate a readable name or a random name
+     * @param $isReadableName
+     * @return string
+     */
+    private function generateName($isReadableName)
+    {
+        if ($isReadableName) {
+            $readableNames = array ('qatqiia', 'toka', 'siki', 'necka', 'tyuko', 'piaktu', 'avil', 'narta', 'inik', 'tipva');
+            return $readableNames[rand(0, count($readableNames) - 1)] . rand(0, 9) . rand(0, 9) . rand(0, 9) . rand(0, 9);
+        } else {
+            return uniqid();
         }
     }
 
     /**
      * Generate a random mail
+     * @param $isReadableName
      * @return string
+     * @internal param $readableName
      */
-    private function randomMail()
+    private function randomMail($isReadableName)
     {
         $domainList = $this->getDomainList();
-        $newMail = uniqid() . $domainList[rand(0, count($domainList) - 1)];
+        $newMail = $this->generateName($isReadableName) . $domainList[rand(0, count($domainList) - 1)];
         return $newMail;
     }
 
@@ -95,10 +121,10 @@ class TempMail
     function getMails($limit = null)
     {
         $mails = $this->curlGET(self::APIGETSMAILENDPOINT . '/' . md5($this->mail));
-        if(isset($mails)){
+        if (isset($mails)) {
             if (isset($mails->error)) {
                 echo '<br>Error: ' . $mails->error;
-            }else{
+            } else {
                 $mails = array_reverse($mails);
 
                 if (isset($limit)) {
@@ -144,7 +170,7 @@ class TempMail
      */
     public function echoMail($mail)
     {
-        if(isset($mail)) {
+        if (isset($mail)) {
             echo '<li>Id: ' . $mail->mail_id;
             echo '<li>From: ' . $mail->mail_from;
             echo '<li>Sub: ' . $mail->mail_subject;
@@ -153,6 +179,4 @@ class TempMail
             echo '<br>';
         }
     }
-
-
 }
